@@ -33,11 +33,21 @@ push :: (using queue : *Queue($Element_Type), element : Element_Type) {
 	buffer[begin + count] = element;
 	count += 1;
 }
-deinit :: (using queue : *Queue($Element_Type)) {
+deinit :: (using queue : *Queue($Element_Type), $do_reset := true) {
 	array_free(buffer);
-	<<queue = .{};
+	#if do_reset {
+		<<queue = .{};
+	}
 }
-for_expansion :: (queue : Queue, body : Code, flags : For_Flags) #expand {
+process :: (queue : *Queue($Element_Type), $body : Code, flags : For_Flags) #expand {
+	`it_index := 0;
+	while 1 {
+		`it, ok := pop(queue);
+		if !ok break;
+		#insert body;
+	}
+}
+for_expansion :: (queue : Queue($Element_Type), $body : Code, flags : For_Flags) #expand {
 	for i : 0..queue.count-1 {
 		`it_index := i;
 		`it := queue.buffer[begin + i];
@@ -55,3 +65,61 @@ last :: (using queue : Queue($Element_Type)) -> Element_Type, bool {
 	if queue.count > 0 then result = queue.buffer[queue.begin + queue.count - 1];
 	return result, queue.count > 0;
 }
+
+SB_Queue :: struct(Element_Type : Type, MAX_ELEMENTS : u32) {
+	buffer : [MAX_ELEMENTS]Element_Type;
+	begin, count := 0;
+}
+pop :: (using queue : *SB_Queue($Element_Type, $MAX_ELEMENTS)) -> Element_Type, bool {
+	elem : Element_Type;
+	ok := true;
+	if count {
+		elem = buffer[begin];
+		begin += 1;
+		count -= 1;
+	} else {
+		ok = false;
+	}
+	return elem, ok;
+}
+push :: (using queue : *SB_Queue($Element_Type, $MAX_ELEMENTS), element : Element_Type) -> ok:bool {
+	if count == MAX_ELEMENTS return false;
+	assert(begin + count <= MAX_ELEMENTS);
+	if begin + count == MAX_ELEMENTS {
+		for i : 0..count-1 {
+			buffer[i] = buffer[begin + i];
+		}
+		begin = 0;
+	}
+	buffer[begin + count] = element;
+	count += 1;
+	return true;
+}
+first :: (queue : SB_Queue($Element_Type, $MAX_ELEMENTS)) -> Element_Type, bool {
+	result : Element_Type;
+	if queue.count > 0 then result = queue.buffer[queue.begin];
+	return result, queue.count > 0;
+}
+last :: (using queue : SB_Queue($Element_Type, $MAX_ELEMENTS)) -> Element_Type, bool {
+	result : Element_Type;
+	if queue.count > 0 then result = queue.buffer[queue.begin + queue.count - 1];
+	return result, queue.count > 0;
+}
+
+process :: (queue : *SB_Queue($Element_Type, $MAX_ELEMENTS), $body : Code, flags : For_Flags) #expand {
+	`it_index := 0;
+	while 1 {
+		`it, ok := pop(queue);
+		if !ok break;
+		#insert body;
+	}
+}
+for_expansion :: (queue : SB_Queue($Element_Type, $MAX_ELEMENTS), $body : Code, flags : For_Flags) #expand {
+	for i : 0..queue.count-1 {
+		`it_index := i;
+		`it := queue.buffer[begin + i];
+
+		#insert body;
+	}
+}
+deinit :: (queue : *SB_Queue($Element_Type, $MAX_ELEMENTS)) { }
