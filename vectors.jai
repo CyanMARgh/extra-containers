@@ -89,21 +89,39 @@ is_empty :: (box : Generic_Box) -> bool {
 is_invalid :: (box : Generic_Box) -> bool {
 	return box.width < 0 || box.height < 0;
 }
-point_inside :: (point : Generic_Vector($type, $N), zone : Generic_Box(type, N)) -> bool {
+point_inside_zone :: (point : Generic_Vector($type, $N), zone : Generic_Box(type, N)) -> bool {
 	for i : 0..N-1 {
 		p, l, w := point.values[i], zone.corner.values[i], zone.size.values[i];
 		if p < l return false;
-		if p > l + w return false;
+		if p >= l + w return false;
 	}
 	return true;
 }
-inside :: (inner : Generic_Box($type, $N, $left_handed), outer : Generic_Box(type, N, left_handed)) -> bool {
-	return point_inside(inner.corner, outer) && point_inside(inner.corner + inner.size, outer);
+point_inside_zone :: (point : Generic_Vector($type, $N), zone : Generic_Vector(type, N)) -> bool {
+	for i : 0..N-1 {
+		p, l := point.values[i], zone.values[i];
+		if p < 0 return false;
+		if p >= l return false;
+	}
+	return true;
 }
-inside :: (inner : Generic_Box($type, $N, $left_handed), outer : Generic_Vector(type, N)) -> bool {
-	return inside(inner, Generic_Box(type, N, left_handed).{size = outer});
+zone_inside_zone :: (inner : Generic_Box($type, $N, $left_handed), outer : Generic_Box(type, N, left_handed)) -> bool {
+	for i : 0..N-1 {
+		c0 := inner.corner.values[i];
+		c1 := outer.corner.values[i];
+
+		s0 := inner.size.values[i];
+		s1 := outer.size.values[i];
+
+		if c0 < c1 return false;
+		if c0 + s0 > c1 + s1 return false;
+	}
+	return true;
 }
-inside :: (inner : Generic_Vector($type, $N), outer : Generic_Vector(type, N)) -> bool {
+zone_inside_zone :: (inner : Generic_Box($type, $N, $left_handed), outer : Generic_Vector(type, N)) -> bool {
+	return zone_inside_zone(inner, Generic_Box(type, N, left_handed).{size = outer});
+}
+zone_inside_zone :: (inner : Generic_Vector($type, $N), outer : Generic_Vector(type, N)) -> bool {
 	for i : 0..N-1 {
 		if inner.values[i] > outer.values[i] return false;
 	}
@@ -118,7 +136,7 @@ cut_border :: (box : Generic_Box($type, $N, $left_handed), gap : type) -> Generi
 	return result;
 }
 fit_in_center :: (zone : Generic_Box($type, $N, $left_handed), box_size : Generic_Vector(type, N)) -> Generic_Box(type, N, left_handed), fit:bool {
-	return .{size = box_size, corner = zone.corner + (zone.size - zone.corner) / 2}, inside(box_size, zone.size);
+	return .{size = box_size, corner = zone.corner + (zone.size - zone.corner) / 2}, zone_inside_zone(box_size, zone.size);
 }
 intersection :: (box1 : Generic_Box($type, $N, $left_handed), box2 : Generic_Box(type, N, left_handed)) -> Ibox2 {
 	result : Generic_Box(type, N, left_handed) = ---;
@@ -126,9 +144,18 @@ intersection :: (box1 : Generic_Box($type, $N, $left_handed), box2 : Generic_Box
 		l1, w1 := box1.corner.values[i], box1.size.values[i];
 		l2, w2 := box2.corner.values[i], box2.size.values[i];
 		result.corner.values[i] = max(l1, l2);
-		result.size.values[i] = min(l1 + w1, l2 + w2);
+		result.size.values[i] = min(l1 + w1, l2 + w2) - result.corner.values[i];
 	}
 	return result;
+}
+
+intersects :: (box1 : Generic_Box($type, $N, $left_handed), box2 : Generic_Box(type, N, left_handed)) -> bool {
+	for i : 0..N-1 {
+		l1, w1 := box1.corner.values[i], box1.size.values[i];
+		l2, w2 := box2.corner.values[i], box2.size.values[i];
+		if max(l1, l2) >= min(l1 + w1, l2 + w2) return false;
+	}
+	return true;
 }
 
 cast_vec :: ($type_out : Type, in : Generic_Vector($type_in, $N)) -> Generic_Vector(type_out, N) {

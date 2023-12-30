@@ -112,6 +112,7 @@ process :: (queue : *SB_Queue($Element_Type, $MAX_ELEMENTS), $body : Code, flags
 		`it, ok := pop(queue);
 		if !ok break;
 		#insert body;
+		it_index += 1;
 	}
 }
 for_expansion :: (queue : SB_Queue($Element_Type, $MAX_ELEMENTS), $body : Code, flags : For_Flags) #expand {
@@ -122,4 +123,6 @@ for_expansion :: (queue : SB_Queue($Element_Type, $MAX_ELEMENTS), $body : Code, 
 		#insert body;
 	}
 }
-deinit :: (queue : *SB_Queue($Element_Type, $MAX_ELEMENTS)) { }
+deinit :: (using queue : *SB_Queue($Element_Type, $MAX_ELEMENTS)) { 
+	// array_free(buffer);
+}
