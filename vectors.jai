@@ -136,7 +136,7 @@ cut_border :: (box : Generic_Box($type, $N, $left_handed), gap : type) -> Generi
 	return result;
 }
 fit_in_center :: (zone : Generic_Box($type, $N, $left_handed), box_size : Generic_Vector(type, N)) -> Generic_Box(type, N, left_handed), fit:bool {
-	return .{size = box_size, corner = zone.corner + (zone.size - zone.corner) / 2}, zone_inside_zone(box_size, zone.size);
+	return .{size = box_size, corner = zone.corner + (zone.size - box_size) / 2}, zone_inside_zone(box_size, zone.size);
 }
 intersection :: (box1 : Generic_Box($type, $N, $left_handed), box2 : Generic_Box(type, N, left_handed)) -> Ibox2 {
 	result : Generic_Box(type, N, left_handed) = ---;
