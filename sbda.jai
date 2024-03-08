@@ -39,6 +39,15 @@ array_add :: (array : *SBDA($T, $N), item: T) {
 	array.buf[array.count] = item;
 	array.count += 1;
 }
+pop_front :: (using sbda : *SBDA($T, $N)) -> T {
+	assert(count > 0);
+	result := buf[0];
+	count -= 1;
+	for i : 0..count-1 {
+		buf[i] = buf[i + 1];
+	}
+	return result;
+}
 for_expansion :: (array : SBDA, body : Code, flags : For_Flags) #expand {
 	#if flags & .REVERSE {
 		for < i : array.count-1..0 {
